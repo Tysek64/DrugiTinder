@@ -1,0 +1,4 @@
+1. create a python virtual environment
+2. install packages listed in 'requirements.txt'
+3. open 'config.yml' and enter the database name and your username
+4. run populateDB.py
