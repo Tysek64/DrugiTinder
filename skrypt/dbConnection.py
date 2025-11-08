@@ -4,7 +4,7 @@ conn = None
 
 def openConnection (dbName, username):
     global conn
-    conn = psycopg.connect(f'dbname={dbName} user={username}')
+    conn = psycopg.connect(f'dbname={dbName} user={username}', autocommit=False)
 
 def closeConnection ():
     conn.commit()

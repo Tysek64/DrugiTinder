@@ -11,17 +11,16 @@ from config import config
 
 print('Populating swipes...')
 swipes = {}
+swiped = {}
 matches = {}
 
 def selectSwipedUser (swipingID):
-    swipedUser = swipingID
-    stepCounter = 0
+    if len(swiped[swipingID]) == 0:
+        return None
 
-    while swipedUser == swipingID or (swipingID in swipes.keys() and swipedUser in swipes[swipingID].keys()) or (swipedUser in swipes.keys() and swipingID in swipes[swipedUser].keys() and not swipes[swipedUser][swipingID]):# and not checkIfCompatible(swipingID, swipedUser):
-        swipedUser = utils.randomFairChoice(users)
-        stepCounter += 1
-        if stepCounter > config['users_number']:
-            return None
+    swipedUser = swiped[swipingID][utils.randomNumber(0, len(swiped[swipingID]) - 1)]
+
+    swiped[swipingID].remove(swipedUser)
 
     return swipedUser
 
@@ -90,6 +89,8 @@ def createMatch (user1, user2):
 
 def populateSwipes ():
     for userNumber, (userID, userData) in enumerate(users.items()):
+        swiped[userID] = list(users.keys())
+        swiped[userID].remove(userID)
         for i in range(utils.randomNumber(0, config['max_user_swipes'])):
             # generate swiping user
             swipingUser = userID
@@ -115,12 +116,9 @@ def populateSwipes ():
 
                 swipes[swipingUser][swipedUser] = result
 
-                # generate match!!!
-                try:
-                    if swipes[swipedUser][swipingUser] and result and utils.randomPercentageConfig('match_probability'):
+                if swipedUser in swipes.keys() and swipingUser in swipes[swipedUser].keys():
+                    if swipes[swipedUser][swipingUser] and swipes[swipingUser][swipedUser]:
                         createMatch(swipingUser, swipedUser)
-                except:
-                    pass
 
         for i in range(100):
             if utils.randomPercentageConfig('user_block_ratio'):
