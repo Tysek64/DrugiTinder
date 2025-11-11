@@ -13,6 +13,8 @@ reasons = utils.readCSV('reportReasons.csv')
 bans = {}
 
 def checkIfBanned (userID, checkDate):
+    if userID not in bans.keys():
+        return False
     for ban in bans[userID]:
         if checkDate >= ban[0] and checkDate <= ban[1]:
             return True
@@ -20,6 +22,8 @@ def checkIfBanned (userID, checkDate):
 
 def getLowestNotBannedDate (userID, checkDate):
     result = datetime.date.today()
+    if userID not in bans.keys():
+        return result
     for ban in bans[userID]:
         if checkDate >= ban[0] and checkDate <= ban[1]:
             result = min(result, ban[0])
