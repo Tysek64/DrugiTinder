@@ -15,8 +15,8 @@ def generateBlock (blockingID, blockedID, minDate=None, maxDifference=None):
     endDate = startDate + datetime.timedelta(days=duration)
 
     block = {
-		'fk_blocking_user_id': blockingID,
-		'fk_blocked_user_id': blockedID,
+		'fk_blocking_user_details_id': blockingID,
+		'fk_blocked_user_details_id': blockedID,
         'start_date': startDate.isoformat(),
         'is_active': endDate >= datetime.date.today()
     }
