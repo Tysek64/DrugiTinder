@@ -7,7 +7,7 @@ username: tysek
 # USER NUMBER OPTIONS
 
 # specify the number of users in the database
-users_number: 10000
+users_number: 1000
 # specify the number of admins in the database
 admins_number:  500
 
@@ -36,6 +36,8 @@ oldest_unverified_photo:  5000
 
 # SUBSCRIPTION OPTIONS
 
+# specify the percentage of users with subscriptions
+subscription_ratio: 10
 # specify the percentage of users having an auto-renewal subscription
 auto_renewal_ratio: 70
 
@@ -64,7 +66,7 @@ max_ban_length: 365
 # SWIPE AND MATCH OPTIONS
 
 # specify the max number of swipes per user
-max_user_swipes:  1000
+max_user_swipes:  100
 # specify the probability of a swipe to the right
 right_swipe_ratio:  75
 

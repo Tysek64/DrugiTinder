@@ -79,7 +79,9 @@ def populateUsers ():
         populateInterests(userID)
         populateImages(userID, list(newAccount.values())[0]['created_at'])
 
-        newUser['fk_subscription_id'] = createSubscription(userID, currentCountry, newUser['fk_city_id'], list(newAccount.values())[0]['created_at'])
+        if utils.randomPercentageConfig('subscription_ratio'):
+            newUser['fk_subscription_id'] = createSubscription(userID, currentCountry, newUser['fk_city_id'], list(newAccount.values())[0]['created_at'])
+            dbConnection.updateData('"user"', {userID: newUser['fk_subscription_id']}, 'id', 'fk_subscription_id')
         newUser['creation_date'] = list(newAccount.values())[0]['created_at']
 
         users[userID] = newUser
