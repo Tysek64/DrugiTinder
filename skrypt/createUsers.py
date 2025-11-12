@@ -22,7 +22,7 @@ def populateInterests (userID):
     interestsNumber = {i: {'freq': -0.15 * ((i - 10) ** 2) + 20} for i in range(21)}
 
     userInterests = {interest: {
-        'fk_user_id': userID,
+        'fk_user_details_id': userID,
         'fk_interest_id': interests[interest]['id'],
         'level_of_interest': utils.randomNumber(1, 10),
         'is_positive': utils.randomNumber(0, 1) == 0
@@ -39,7 +39,7 @@ def populateImages (userID, creationDate):
         'is_current': utils.randomNumber(0, config['oldest_current_photo']) > (datetime.datetime.now() - uploadDate).days,
         'file_size_bytes': utils.randomNumber(500 * 1024, 5 * 1024 * 1024),
         'is_verified': utils.randomNumber(0, config['oldest_unverified_photo']) < (datetime.datetime.now() - uploadDate).days,
-        'fk_user_id': userID
+        'fk_user_details_id': userID
     } for j, uploadDate in enumerate([
             Faker().date_time_between(datetime.datetime.fromisoformat(creationDate), datetime.datetime.now())
         for i in range(utils.randomChoice(imagesNumber, 'freq'))])}
@@ -51,7 +51,7 @@ def populateUsers ():
 
     for i in range(config['users_number']):
         newAccount = createAccounts.createAccount()
-        accountID = dbConnection.insertData('account', newAccount)[0]
+        accountID = dbConnection.insertData('"user"', newAccount)[0]
 
         searchPreference = createSearchPreference()
         preferenceID = dbConnection.insertData('search_preference', searchPreference)[0]
@@ -70,10 +70,10 @@ def populateUsers ():
         userSex = utils.randomChoice(sexes, 'frequencyIGuess')
         newUser['fk_city_id'] = utils.randomFairChoice(cities)
         newUser['fk_sex_id'] = sexes[userSex]['id']
-        newUser['fk_account_id'] = accountID
+        newUser['fk_user_id'] = accountID
         newUser['fk_search_preference_id'] = preferenceID
 
-        userID = dbConnection.insertData('"user"', {0: newUser})[0]
+        userID = dbConnection.insertData('user_details', {0: newUser})[0]
 
         newUser['interested_sexes'] = populateSearchPreference(preferenceID, userSex)
         populateInterests(userID)
@@ -81,7 +81,7 @@ def populateUsers ():
 
         if utils.randomPercentageConfig('subscription_ratio'):
             newUser['fk_subscription_id'] = createSubscription(userID, currentCountry, newUser['fk_city_id'], list(newAccount.values())[0]['created_at'])
-            dbConnection.updateData('"user"', {userID: newUser['fk_subscription_id']}, 'id', 'fk_subscription_id')
+            dbConnection.updateData('user_details', {userID: newUser['fk_subscription_id']}, 'id', 'fk_subscription_id')
         newUser['creation_date'] = list(newAccount.values())[0]['created_at']
 
         users[userID] = newUser
