@@ -9,9 +9,9 @@ dbConnection.clearTable('sex')
 dbConnection.clearTable('interest')
 dbConnection.clearTable('subscription_plan')
 
-dbConnection.clearTable('account')
-
 dbConnection.clearTable('"user"')
+
+dbConnection.clearTable('user_details')
 dbConnection.clearTable('user_interest')
 dbConnection.clearTable('image')
 
