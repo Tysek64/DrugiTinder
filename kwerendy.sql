@@ -265,3 +265,88 @@ LEFT JOIN (
   WHERE ui1.fk_interest_id = ui2.fk_interest_id
   GROUP BY m.id
 ) shared ON matches.match_id = shared.match_id;
+
+-- Returns 10 next suggestions for selected user to swipe. Takes interest, sex and swipes into account
+-- User id, for which the action should be performed, must be entered in first helper query
+WITH cu AS (
+    SELECT
+        ud.id AS user_details_id,
+        ud.fk_search_preference_id AS search_pref_id,
+        ud.fk_sex_id AS user_sex_id
+    FROM user_details ud
+    WHERE ud.id = 27010
+),
+preferred_sexes AS (
+    SELECT sps.fk_sex_id
+    FROM search_preference_sex sps
+    JOIN cu ON sps.fk_search_preference_id = cu.search_pref_id
+),
+already_swiped AS (
+    SELECT fk_swiped_user_details_id
+    FROM swipe
+    JOIN cu  ON swipe.fk_swiping_user_details_id = cu.user_details_id
+),
+compatibility AS (
+    SELECT
+        ud.id AS other_user_id,
+        SUM(
+            CASE
+                WHEN cui.is_positive = ui.is_positive THEN ui.level_of_interest
+                ELSE -ui.level_of_interest
+            END
+        ) AS score_user_to_candidate,
+        SUM(
+            CASE
+                WHEN uip.is_positive = ui_user.is_positive THEN ui_user.level_of_interest
+                ELSE -ui_user.level_of_interest
+            END
+        ) AS score_candidate_to_user,
+        COUNT(*) AS shared_interests
+    FROM user_details ud
+    JOIN user_interest ui ON ui.fk_user_details_id = ud.id
+    JOIN user_interest cui ON cui.fk_user_details_id = (SELECT user_details_id FROM cu)
+        AND cui.fk_interest_id = ui.fk_interest_id
+    JOIN search_preference_interest uip ON uip.fk_search_preference_id = ud.fk_search_preference_id
+        AND uip.fk_interest_id = cui.fk_interest_id
+    JOIN user_interest ui_user ON ui_user.fk_user_details_id = (SELECT user_details_id FROM cu)
+        AND ui_user.fk_interest_id = uip.fk_interest_id
+    WHERE ud.id <> (SELECT user_details_id FROM cu)
+    GROUP BY ud.id
+)
+SELECT
+    ud.id,
+    ud.name,
+    ud.surname,
+    ud.fk_sex_id,
+    c.shared_interests,
+    ROUND(((c.score_user_to_candidate + c.score_candidate_to_user)/2)::numeric, 2) AS avg_compatibility,
+    ROUND(((c.score_user_to_candidate + c.score_candidate_to_user)/2)::numeric, 2) * c.shared_interests AS weighted_score
+FROM user_details ud
+JOIN compatibility c ON c.other_user_id = ud.id
+WHERE
+    ((SELECT COUNT(*) FROM preferred_sexes) = 0 OR ud.fk_sex_id IN (SELECT fk_sex_id FROM preferred_sexes))
+    AND (
+        (SELECT COUNT(*) FROM search_preference_sex sps WHERE sps.fk_search_preference_id = ud.fk_search_preference_id) = 0
+        OR (SELECT user_sex_id FROM cu) IN (
+            SELECT fk_sex_id
+            FROM search_preference_sex sps
+            WHERE sps.fk_search_preference_id = ud.fk_search_preference_id
+        )
+    )
+    AND ud.id NOT IN (SELECT fk_swiped_user_details_id FROM already_swiped)
+ORDER BY weighted_score DESC NULLS LAST, avg_compatibility DESC, shared_interests DESC, ud.created_at DESC
+LIMIT 10;
+
+-- Last 10 messages in every conversation - horribly written (for index testing purposes)
+SELECT m.*
+FROM message m
+WHERE (
+    SELECT COUNT(*)
+    FROM message m2
+    WHERE m2.fk_conversation_id = m.fk_conversation_id
+      AND m2.send_time > m.send_time
+) < 10
+ORDER BY m.fk_conversation_id, m.send_time DESC;
+
+
+
