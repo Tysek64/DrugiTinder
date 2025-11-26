@@ -14,6 +14,6 @@ CREATE INDEX idx_ui_fk_user_details_id ON user_interest(fk_user_details_id);
 
 CREATE INDEX idx_ui_covering ON user_interest(fk_user_details_id, fk_interest_id, level_of_interest, is_positive);
 
-CREATE INDEX idx_message_sent_time ON message(sent_time);
+CREATE INDEX idx_message_send_time ON message(send_time);
 
 CREATE INDEX idx_image_user_current ON image(fk_user_details_id, is_current);
