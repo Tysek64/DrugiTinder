@@ -103,8 +103,8 @@ def populateSwipes ():
                 result = utils.randomPercentageConfig('right_swipe_ratio')
 
                 currentSwipe = {
-                    'fk_swiping_user_id': swipingUser,
-                    'fk_swiped_user_id': swipedUser,
+                    'fk_swiping_user_details_id': swipingUser,
+                    'fk_swiped_user_details_id': swipedUser,
                     'result': result
                 }
 
