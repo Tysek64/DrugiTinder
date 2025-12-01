@@ -35,7 +35,7 @@ def generateBan (report):
     endDate = startDate + datetime.timedelta(days=duration)
 
     ban = {
-		'fk_user_id': report['fk_reported_user_id'],
+		'fk_user_details_id': report['fk_reported_user_details_id'],
 		'fk_report_id': report['id'],
 		'start_date': startDate.isoformat(),
 		'period_days': duration,
@@ -43,13 +43,13 @@ def generateBan (report):
     }
 
     dbConnection.insertData('ban', {0: ban})
-    if ban['fk_user_id'] not in bans.keys():
-        bans[ban['fk_user_id']] = [(startDate, endDate)]
+    if ban['fk_user_details_id'] not in bans.keys():
+        bans[ban['fk_user_details_id']] = [(startDate, endDate)]
     else:
-        bans[ban['fk_user_id']].append((startDate, endDate))
+        bans[ban['fk_user_details_id']].append((startDate, endDate))
 
 def updateAdminStats (adminStats):
-    dbConnection.updateData('administrator', adminStats, 'fk_account_id', 'reports_handled')
+    dbConnection.updateData('administrator', adminStats, 'fk_user_id', 'reports_handled')
 
 def populateReports ():
     adminReportStats = {}
@@ -73,8 +73,8 @@ def populateReports ():
         currentReport = {
             'reason': reason,
             'report_date': datetime.date(reportDate.year, reportDate.month, reportDate.day).isoformat(),
-            'fk_reporting_user_id': reportingUser,
-            'fk_reported_user_id': reportedUser,
+            'fk_reporting_user_details_id': reportingUser,
+            'fk_reported_user_details_id': reportedUser,
             'fk_administrator_id': utils.randomFairChoice(admins)
         }
 

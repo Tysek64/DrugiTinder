@@ -14,11 +14,11 @@ def populateAdmins ():
 
     for i in range(config['admins_number']):
         newAccount = createAccounts.createAccount()
-        accountID = dbConnection.insertData('account', newAccount)[0]
+        accountID = dbConnection.insertData('"user"', newAccount)[0]
 
         newAdmin = {}
 
-        newAdmin['fk_account_id'] = accountID
+        newAdmin['fk_user_id'] = accountID
         hiringTime = min(datetime.datetime.fromisoformat(list(newAccount.values())[0]['created_at']) + datetime.timedelta(days=utils.randomNumber(-1 * config['max_admin_hiring_difference'], config['max_admin_hiring_difference'])), datetime.datetime.now())
         newAdmin['hiring_date'] = datetime.date(hiringTime.year, hiringTime.month, hiringTime.day).isoformat()
 
