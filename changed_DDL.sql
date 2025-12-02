@@ -52,6 +52,7 @@ CREATE TABLE subscription_plan (
     name          VARCHAR(100)   NOT NULL,
     price         DECIMAL(10, 2) NOT NULL CHECK (price > 0),
     payment_cycle VARCHAR(50)    NOT NULL CHECK (payment_cycle IN ('Yearly', 'Monthly', 'OneTime')),
+    max_users     INTEGER        DEFAULT 1 CHECK (max_users > 0),
     benefits      TEXT,
     is_active     BOOLEAN DEFAULT TRUE
 );
@@ -78,21 +79,20 @@ CREATE TABLE payment_data (
 CREATE TABLE subscription (
     id                      INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     expiration_date         DATE NOT NULL,
-    last_renewal            DATE,
-    -- HERE
     created_at              TIMESTAMP DEFAULT now(),
-    uploaded_at             TIMESTAMP DEFAULT now(),
+    updated_at              TIMESTAMP DEFAULT now(),
     is_active               BOOLEAN DEFAULT TRUE,
     auto_renewal            BOOLEAN DEFAULT FALSE,
     fk_subscription_plan_id INT  NOT NULL,
     fk_payment_data_id      INT,
+    fk_owner_id             INT  NOT NULL,
     FOREIGN KEY (fk_subscription_plan_id) REFERENCES subscription_plan (id)
         ON DELETE RESTRICT
         ON UPDATE CASCADE,
     FOREIGN KEY (fk_payment_data_id) REFERENCES payment_data (id)
         ON DELETE SET NULL
         ON UPDATE CASCADE,
-    CHECK (last_renewal IS NULL OR expiration_date >= last_renewal)
+    CHECK (updated_at IS NULL OR expiration_date >= updated_at)
 );
 
 -- =============================================================
@@ -110,7 +110,7 @@ CREATE TABLE search_preference_sex (
     id                      INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     fk_search_preference_id INT NOT NULL,
     fk_sex_id               INT NOT NULL,
-    priorty                 INT,
+    priority                 INT,
     FOREIGN KEY (fk_search_preference_id) REFERENCES search_preference (id)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
@@ -130,6 +130,7 @@ CREATE TABLE search_preference_interest (
     fk_interest_id          INT NOT NULL,
     level_of_interest       INT,
     is_positive             BOOLEAN,
+    UNIQUE (fk_search_preference_id, fk_interest_id),
     FOREIGN KEY (fk_search_preference_id) REFERENCES search_preference (id)
         ON DELETE CASCADE,
     FOREIGN KEY (fk_interest_id) REFERENCES interest (id)
@@ -147,7 +148,7 @@ CREATE TABLE user_details (
     fk_city_id              INT,
     fk_subscription_id      INT,
     fk_search_preference_id INT,
-    fk_user_id              INT,
+    fk_user_id              INT UNIQUE,
     created_at              TIMESTAMP DEFAULT now(),
     updated_at              TIMESTAMP DEFAULT now(),
     FOREIGN KEY (fk_sex_id) REFERENCES sex (id)
@@ -166,6 +167,15 @@ CREATE TABLE user_details (
         ON DELETE SET NULL
         ON UPDATE SET NULL
 );
+
+-- DODANIE KLUCZA OBCEGO TERA BO WCZEŚNIEJ TABELA USER_DETAILS NIE ISTNIALA
+
+ALTER TABLE subscription
+ADD CONSTRAINT fk_subscription_owner
+FOREIGN KEY (fk_owner_id) REFERENCES user_details (id)
+ON DELETE CASCADE
+ON UPDATE CASCADE;
+
 
 CREATE TABLE image (
     id              INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
@@ -186,6 +196,7 @@ CREATE TABLE user_interest (
     is_positive       BOOLEAN DEFAULT TRUE,
     fk_user_details_id        INT NOT NULL,
     fk_interest_id    INT NOT NULL,
+    UNIQUE (fk_user_details_id, fk_interest_id),
     FOREIGN KEY (fk_user_details_id) REFERENCES user_details (id)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
@@ -238,13 +249,13 @@ CREATE UNIQUE INDEX ux_match_pair ON "match" (LEAST(fk_person1_id, fk_person2_id
                                               GREATEST(fk_person1_id, fk_person2_id));
 
 CREATE TABLE block (
+    id                          INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     fk_blocking_user_details_id INT NOT NULL,
     fk_blocked_user_details_id  INT NOT NULL,
     start_date          TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
-    -- HERE
     end_date            TIMESTAMP,
     is_active           BOOLEAN DEFAULT TRUE,
-    PRIMARY KEY (fk_blocking_user_details_id, fk_blocked_user_details_id),
+    UNIQUE (fk_blocking_user_details_id, fk_blocked_user_details_id),
     FOREIGN KEY (fk_blocking_user_details_id) REFERENCES user_details (id)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
@@ -304,7 +315,7 @@ CREATE TABLE "report" (
     FOREIGN KEY (fk_reported_user_details_id) REFERENCES user_details (id)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
-    FOREIGN KEY (fk_administrator_id) REFERENCES administrator (fk_user_id)
+    FOREIGN KEY (fk_administrator_id) REFERENCES administrator (id)
         ON DELETE SET NULL
         ON UPDATE CASCADE,
     CHECK (fk_reporting_user_details_id <> fk_reported_user_details_id)
