@@ -92,6 +92,9 @@ CREATE TABLE subscription (
     FOREIGN KEY (fk_payment_data_id) REFERENCES payment_data (id)
         ON DELETE SET NULL
         ON UPDATE CASCADE,
+    FOREIGN KEY (fk_owner_id) REFERENCES user (id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE,
     CHECK (updated_at IS NULL OR expiration_date >= updated_at)
 );
 

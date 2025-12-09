@@ -1,16 +1,12 @@
 pub mod bulk;
 
 use crate::config::Config;
-use anyhow::{Context, Result};
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
 use tokio_postgres::NoTls;
 
-pub fn create_pool(config: &Config) -> Pool {
-    // Note: In a real app, don't hardcode env var fallback inside library code if config is passed,
-    // but here we align with the provided shell script env vars.
+pub fn create_pool(_config: &Config) -> Pool {
     let mut pg_config = tokio_postgres::Config::new();
 
-    // We expect these to be set by populate_rust.sh
     pg_config.host(&std::env::var("DB_HOST").unwrap_or("localhost".to_string()));
     pg_config.port(
         std::env::var("DB_PORT")

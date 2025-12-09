@@ -52,7 +52,7 @@ pub struct DbUserDetails {
     pub created_at: NaiveDateTime,
 }
 
-// --- Interaction Structs (New) ---
+// --- Interaction Structs ---
 
 #[derive(Debug, Serialize)]
 pub struct DbSwipe {
@@ -69,8 +69,6 @@ pub struct DbMatch {
     pub date_formed: NaiveDateTime,
     pub status: String,
 }
-//
-// ... (Keep existing structs: CountryRecord, PlanRecord, DbUser, DbUserDetails, DbSwipe, DbMatch) ...
 
 // --- 1. Admin & Auth ---
 #[derive(Debug, Serialize)]
@@ -114,19 +112,21 @@ pub struct DbSearchPreference {
     pub updated_at: NaiveDateTime,
 }
 
+// Fixed: Using Option for priority to match generator logic
 #[derive(Debug, Serialize)]
 pub struct DbSearchPreferenceSex {
     pub fk_search_preference_id: i32,
     pub fk_sex_id: i32,
-    pub priorty: i32,
+    pub priorty: Option<i32>,
 }
 
+// Fixed: Using Option for level/positive to match generator logic
 #[derive(Debug, Serialize)]
 pub struct DbSearchPreferenceInterest {
     pub fk_search_preference_id: i32,
     pub fk_interest_id: i32,
-    pub level_of_interest: i32,
-    pub is_positive: bool,
+    pub level_of_interest: Option<i32>,
+    pub is_positive: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -183,4 +183,14 @@ pub struct DbBlock {
     pub start_date: NaiveDateTime,
     pub end_date: Option<NaiveDateTime>,
     pub is_active: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DbImage {
+    pub file_path: String,
+    pub uploaded_at: NaiveDateTime,
+    pub is_current: bool,
+    pub file_size_bytes: i64,
+    pub is_verified: bool,
+    pub fk_user_details_id: i32,
 }

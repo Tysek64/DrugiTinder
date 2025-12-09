@@ -7,7 +7,7 @@ username: tysek
 # USER NUMBER OPTIONS
 
 # specify the number of users in the database
-users_number: 1000
+users_number: 10000
 # specify the number of admins in the database
 admins_number:  500
 

@@ -21,6 +21,30 @@ async fn fetch_ids(client: &Client, table: &str) -> Result<Vec<i32>> {
     Ok(rows.iter().map(|r| r.get(0)).collect())
 }
 
+async fn truncate_database(client: &tokio_postgres::Client) -> anyhow::Result<()> {
+    println!(">>> Cleaning up database...");
+    // We use CASCADE to automatically wipe dependent tables (e.g., deleting 'user' deletes 'user_details')
+    // RESTART IDENTITY resets the auto-increment counters to 1.
+    client
+        .batch_execute(
+            "
+        TRUNCATE TABLE 
+            \"user\", 
+            administrator, 
+            subscription_plan, 
+            city, 
+            country, 
+            sex, 
+            interest,
+            search_preference
+        RESTART IDENTITY CASCADE;
+    ",
+        )
+        .await?;
+    println!(">>> Database cleaned.");
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     println!(">>> Tinder 2.0 Optimizer Starting...");
@@ -31,6 +55,8 @@ async fn main() -> Result<()> {
     let pool = create_pool(&config);
     let client = pool.get().await?;
 
+    truncate_database(&client).await?;
+
     // =========================================================================
     // 1. STATIC DATA & CACHING
     // =========================================================================
@@ -40,8 +66,7 @@ async fn main() -> Result<()> {
     let city_ids = fetch_ids(&client, "city").await?;
     let plan_ids = fetch_ids(&client, "subscription_plan").await?;
     let interest_ids = fetch_ids(&client, "interest").await?;
-    // We don't strictly need sex_ids here as the randomizer handles 1/2 logic,
-    // but good to have if you want to be strict.
+    let sex_ids = fetch_ids(&client, "sex").await?; // Needed for User Gen AND Search Prefs
 
     // =========================================================================
     // 2. PRE-REQUISITES (Data that Users depend on)
@@ -138,8 +163,6 @@ async fn main() -> Result<()> {
     // 3a. Generate Admin Accounts (User Table)
     let admin_users = generators::users::generate_user_batch(config.admins_number);
 
-    // Insert Admin Users Auth
-    // (Reusing the raw insert logic here for brevity, or you could abstract this into a function)
     let stmt = client
         .prepare(
             "
@@ -189,7 +212,6 @@ async fn main() -> Result<()> {
                 .await?;
 
         // B. Insert Auth (IO)
-        // We re-prepare stmt inside loop or reuse if we moved it out. Re-preparing is negligible here.
         let stmt = client
             .prepare(
                 "
@@ -213,14 +235,12 @@ async fn main() -> Result<()> {
         all_user_ids.extend_from_slice(&user_ids);
 
         // C. Generate Details (CPU)
-        // We clone the pre-req ID vectors to pass them into the thread
         let cfg_clone = config.clone();
         let uids_clone = user_ids.clone();
         let sub_ids_clone = available_sub_ids.clone();
         let pref_ids_clone = available_pref_ids.clone();
 
         let details_batch = tokio::task::spawn_blocking(move || {
-            // **NOTE**: You must update generators::users::generate_details_batch signature!
             generators::users::generate_details_batch(
                 uids_clone,
                 &cfg_clone,
@@ -252,15 +272,13 @@ async fn main() -> Result<()> {
     pb.finish_with_message("Users Done");
 
     // Fetch all User Detail IDs (Needed for everything that follows)
-    // Note: 'all_user_ids' contains Auth IDs. We need Detail IDs for Swipe/Match/Interest keys.
     let user_detail_ids = fetch_ids(&client, "user_details").await?;
 
     // =========================================================================
     // 5. POST-REQUISITES (Interests)
     // =========================================================================
     println!(">>> Linking User Interests...");
-    // We can do this in one massive batch or chunk it. One batch is usually fine for <100k users.
-    let ud_ids_clone = user_detail_ids.clone(); // Clone for generator
+    let ud_ids_clone = user_detail_ids.clone();
     let int_ids_clone = interest_ids.clone();
 
     let user_interests = tokio::task::spawn_blocking(move || {
@@ -286,7 +304,7 @@ async fn main() -> Result<()> {
     println!(">>> Generating Interactions (Swipes & Matches)...");
 
     let cfg_clone = config.clone();
-    let ud_ids_clone = user_detail_ids.clone(); // Use DETAILS IDs for swipes, not Auth IDs
+    let ud_ids_clone = user_detail_ids.clone();
 
     let interactions = tokio::task::spawn_blocking(move || {
         generators::interactions::generate_interactions(&ud_ids_clone, &cfg_clone)
@@ -331,6 +349,9 @@ async fn main() -> Result<()> {
         .map(|r| (r.get(0), r.get(1), r.get(2)))
         .collect();
 
+    // Store match pairs for block logic later
+    let match_pairs: Vec<(i32, i32)> = match_rows.iter().map(|r| (r.get(1), r.get(2))).collect();
+
     if !match_data.is_empty() {
         let cfg_clone = config.clone();
 
@@ -350,12 +371,11 @@ async fn main() -> Result<()> {
         .await?;
 
         // 7b. Generate Messages
-        // Need Convo IDs to link messages
         let convo_rows = client
             .query(
                 "SELECT c.id, m.fk_person1_id, m.fk_person2_id 
-             FROM conversation c 
-             JOIN \"match\" m ON c.fk_match_id = m.id",
+                 FROM conversation c 
+                 JOIN \"match\" m ON c.fk_match_id = m.id",
                 &[],
             )
             .await?;
@@ -380,6 +400,131 @@ async fn main() -> Result<()> {
         )
         .await?;
     }
+
+    // =========================================================================
+    // 8. MEDIA (Images)
+    // =========================================================================
+    println!(">>> Generating Images...");
+    let images = tokio::task::spawn_blocking({
+        let uids = user_detail_ids.clone();
+        let cfg = config.clone();
+        move || generators::content::generate_images(&uids, &cfg)
+    })
+    .await?;
+
+    bulk.insert(
+        "image",
+        &[
+            "file_path",
+            "uploaded_at",
+            "is_current",
+            "file_size_bytes",
+            "is_verified",
+            "fk_user_details_id",
+        ],
+        &images,
+    )
+    .await?;
+
+    // =========================================================================
+    // 9. SEARCH PREFERENCE DETAILS
+    // =========================================================================
+    println!(">>> Linking Search Preferences (Sex & Interests)...");
+    // We need to fetch the preference IDs we generated way back in step 2A
+    let pref_ids = fetch_ids(&client, "search_preference").await?;
+
+    // We use the sex_ids and interest_ids cached at start of main
+    let sp_sex = generators::content::generate_search_pref_sex(&pref_ids, &sex_ids);
+    bulk.insert(
+        "search_preference_sex",
+        &["fk_search_preference_id", "fk_sex_id", "priorty"],
+        &sp_sex,
+    )
+    .await?;
+
+    let sp_int = generators::content::generate_search_pref_interests(&pref_ids, &interest_ids);
+    bulk.insert(
+        "search_preference_interest",
+        &[
+            "fk_search_preference_id",
+            "fk_interest_id",
+            "level_of_interest",
+            "is_positive",
+        ],
+        &sp_int,
+    )
+    .await?;
+
+    // =========================================================================
+    // 10. SOCIAL SAFETY (Reports, Bans, Blocks)
+    // =========================================================================
+    println!(">>> Generating Safety Data (Reports, Bans, Blocks)...");
+
+    // A. Reports
+    let admin_rows = client
+        .query("SELECT fk_user_id FROM administrator", &[])
+        .await?;
+    let admin_ids: Vec<i32> = admin_rows.iter().map(|r| r.get(0)).collect();
+
+    let reports = generators::social::generate_reports(&user_detail_ids, &admin_ids, &config);
+    bulk.insert(
+        "report",
+        &[
+            "reason",
+            "report_date",
+            "fk_reporting_user_details_id",
+            "fk_reported_user_details_id",
+            "fk_administrator_id",
+        ],
+        &reports,
+    )
+    .await?;
+
+    // B. Bans
+    // Must fetch reports to link bans
+    let report_rows = client
+        .query(
+            "SELECT id, fk_reported_user_details_id, report_date FROM report",
+            &[],
+        )
+        .await?;
+    let report_meta: Vec<generators::social::ReportMeta> = report_rows
+        .iter()
+        .map(|r| generators::social::ReportMeta {
+            id: r.get(0),
+            reported_user_id: r.get(1),
+            report_date: r.get(2),
+        })
+        .collect();
+
+    let bans = generators::social::generate_bans(&report_meta, &config);
+    bulk.insert(
+        "ban",
+        &[
+            "fk_user_details_id",
+            "fk_report_id",
+            "start_date",
+            "period_days",
+            "is_active",
+        ],
+        &bans,
+    )
+    .await?;
+
+    // C. Blocks
+    let blocks = generators::social::generate_blocks(&user_detail_ids, &match_pairs, &config);
+    bulk.insert(
+        "block",
+        &[
+            "fk_blocking_user_details_id",
+            "fk_blocked_user_details_id",
+            "start_date",
+            "end_date",
+            "is_active",
+        ],
+        &blocks,
+    )
+    .await?;
 
     println!(">>> Population Complete.");
     Ok(())
