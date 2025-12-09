@@ -1,5 +1,0 @@
-dodanie klucza sztucznego do blocka
-dodanie maksymalnej liczby uzytkownikow do planu subskrypcji
-dodanie wlasciciela do subskrypcji
-usunac uploaded_at z subskrypcji
-zamienic last_renewal na updated_at

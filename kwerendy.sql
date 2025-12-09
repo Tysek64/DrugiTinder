@@ -348,5 +348,16 @@ WHERE (
 ) < 10
 ORDER BY m.fk_conversation_id, m.send_time DESC;
 
+-- amount of subscriptions with specific max users from subscription plan
+select subscription_plan.max_users, Count(subscription.id) as amount_of_subscriptions
+from subscription INNER JOIN subscription_plan on subscription.fk_subscription_plan_id = 
+subscription_plan.id
+Group by subscription_plan.max_users;
+
+-- Active subscriptions where owner's subscription id is different than subscription id
+SELECT COUNT(subscription.id)
+FROM subscription INNER JOIN user_details ON subscription.fk_owner_id = user_details.id
+WHERE user_details.fk_subscription_id IS DISTINCT FROM subscription.id
+AND subscription.is_active = true;
 
 
