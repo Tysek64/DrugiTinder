@@ -1,0 +1,99 @@
+# CONNECTION OPTIONS
+
+database_name:  Tinder2
+username: tysek
+
+
+# USER NUMBER OPTIONS
+
+# specify the number of users in the database
+users_number: 1000
+# specify the number of admins in the database
+admins_number:  500
+
+
+# USER GEOGRAPHIC OPTIONS
+
+# enable localized names and place names (this does include using other scripts)
+enable_locale:  true
+
+# specify what percentage of users should not have their name associated with the locale they live in
+migration_ratio:  10
+
+# specify the percentage of users that have their billing address in another city (in the same country)
+domestic_migration_ratio: 10
+# specify the percentage of users that have their billing address in another city (in another country)
+international_migration_ratio:  5
+
+
+# OTHER USER OPTIONS
+
+# specify after how many days a photo must not be current
+oldest_current_photo: 5000
+# specify after how many days a photo can be unverified
+oldest_unverified_photo:  5000
+
+
+# SUBSCRIPTION OPTIONS
+
+# specify the percentage of users with subscriptions
+subscription_ratio: 10
+# specify the percentage of users having an auto-renewal subscription
+auto_renewal_ratio: 70
+
+
+# ADMIN OPTIONS
+
+# specify the maximum time difference (in days) between an admin is hired and their account is created
+max_admin_hiring_difference:  30
+
+
+# REPORT AND BAN OPTIONS
+
+# specify the number of reports per 100 users
+user_report_ratio:  10
+# specify how many reports end in a ban (as a percentage)
+report_ban_ratio: 70
+# specify the max time (in days) after a ban must be put in place (after a report had been created)
+max_report_ban_difference:  60
+
+# specify the minimum ban length in days
+min_ban_length: 7
+# specify the maximum ban length in days
+max_ban_length: 365
+
+
+# SWIPE AND MATCH OPTIONS
+
+# specify the max number of swipes per user
+max_user_swipes:  100
+# specify the probability of a swipe to the right
+right_swipe_ratio:  75
+
+# specify the probability of a match (in percent) after two successful swipes
+match_probability:  1000
+
+
+# BLOCK OPTIONS
+
+# specify the percentage of matches ending in someone getting blockes
+match_block_ratio:  100
+# specify the max difference in days between the end of a match and someone getting blocked
+max_match_block_difference: 7
+
+# specify the the number of blocks per 100 users
+user_block_ratio: 60
+
+# specify the minimum block length in days
+min_block_length: 15
+# specify the maximum block length in days
+max_block_length: 5000
+
+
+# CONVERSATION OPTIONS
+
+# specify the maximum number of messages in a conversation
+max_conversation_length:  100
+
+# specify the probability of a message being a reply
+reply_ratio:  10

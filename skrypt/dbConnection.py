@@ -2,26 +2,50 @@ import psycopg
 
 conn = None
 
-def openConnection (dbName, username):
-    global conn
-    conn = psycopg.connect(f'dbname={dbName} user={username}', autocommit=False)
 
-def closeConnection ():
+def openConnection(dbName, username, password=None, host=None, port=None):
+    global conn
+
+    conn_info = f"dbname={dbName} user={username}"
+
+    if password:
+        conn_info += f" password={password}"
+    if host:
+        conn_info += f" host={host}"
+    if port:
+        conn_info += f" port={port}"
+
+    conn = psycopg.connect(conn_info, autocommit=False)
+
+
+def closeConnection():
     conn.commit()
     conn.close()
 
-def insertData (tableName, data, fieldNames=None, returnID=True):
+
+def insertData(tableName, data, fieldNames=None, returnID=True):
     result = []
     with conn.cursor() as cur:
         for row in data.values():
-            goodFields = {k: v for k, v in row.items() if fieldNames is None or k in fieldNames}
-            query = 'INSERT INTO %s (' + ('%s, ' * (len(goodFields.keys()) - 1)) + '%s) VALUES ('# + ('%s, ' * (len(goodFields.values()) - 1)) + '%s) ' + (' RETURNING id;' if returnID else ';')
+            goodFields = {
+                k: v for k, v in row.items() if fieldNames is None or k in fieldNames
+            }
+            query = (
+                "INSERT INTO %s ("
+                + ("%s, " * (len(goodFields.keys()) - 1))
+                + "%s) VALUES ("
+            )  # + ('%s, ' * (len(goodFields.values()) - 1)) + '%s) ' + (' RETURNING id;' if returnID else ';')
 
             args = [tableName]
             args.extend(list(goodFields.keys()))
 
             query = query % tuple(args)
-            query = query + ('%s, ' * (len(goodFields.values()) - 1)) + '%s) ' + (' RETURNING id;' if returnID else ';')
+            query = (
+                query
+                + ("%s, " * (len(goodFields.values()) - 1))
+                + "%s) "
+                + (" RETURNING id;" if returnID else ";")
+            )
 
             args = list(goodFields.values())
 
@@ -30,16 +54,24 @@ def insertData (tableName, data, fieldNames=None, returnID=True):
                 result.append(cur.fetchone()[0])
     return result
 
-def updateData (tableName, data, keyFieldName, valFieldName):
+
+def updateData(tableName, data, keyFieldName, valFieldName):
     with conn.cursor() as cur:
         for k, v in data.items():
-            cur.execute(f'UPDATE {tableName} SET {valFieldName} = %s WHERE {keyFieldName} = %s;', (v, k))
+            cur.execute(
+                f"UPDATE {tableName} SET {valFieldName} = %s WHERE {keyFieldName} = %s;",
+                (v, k),
+            )
 
-def getData (tableName, fieldNames=None):
+
+def getData(tableName, fieldNames=None):
     with conn.cursor() as cur:
-        cur.execute(f'SELECT {'*' if fieldNames is None else ','.join(fieldNames)} FROM {tableName}')
+        cur.execute(
+            f"SELECT {'*' if fieldNames is None else ','.join(fieldNames)} FROM {tableName}"
+        )
         return cur.fetchall()
 
-def clearTable (tableName):
+
+def clearTable(tableName):
     with conn.cursor() as cur:
-        cur.execute(f'TRUNCATE TABLE {tableName} CASCADE')
+        cur.execute(f"TRUNCATE TABLE {tableName} CASCADE")
