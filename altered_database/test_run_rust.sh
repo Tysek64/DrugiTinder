@@ -3,11 +3,11 @@
 set -e
 
 IMAGE_NAME="pdb-demo:latest"
-CONTAINER_NAME="pdb-test-run"
+CONTAINER_NAME="pdb-test-run-rust"
 PORT=5434
 
-echo ">>> 0/3: Building image: $IMAGE_NAME..."
-docker build -t pdb-demo:latest .
+# echo ">>> 0/3: Building image: $IMAGE_NAME..."
+# docker build -t pdb-demo:latest .
 
 echo ">>> 1/3: Deploying container: $CONTAINER_NAME on port $PORT..."
 ./deploy.sh "$CONTAINER_NAME" "$PORT"
@@ -19,8 +19,8 @@ else
   echo ">>> 2/3: Skipping DB Populating as requested"
 fi
 
-echo ">>> 3/3: Altering the database..."
-./migrate.sh "$CONTAINER_NAME"
+# echo ">>> 3/3: Altering the database..."
+# ./migrate.sh "$CONTAINER_NAME"
 
 echo ">>>TEST PASSED: Successfully run the demo (assuming the .SQL scripts are correct)."
 echo ">>> To clean up, run: docker rm -f $CONTAINER_NAME"

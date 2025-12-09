@@ -48,12 +48,29 @@ pub fn generate_user_batch(size: usize) -> Vec<DbUser> {
 }
 
 /// Generates the UserDetails, handling migration logic
-pub fn generate_details_batch(user_ids: Vec<i32>, _config: &Config) -> Vec<DbUserDetails> {
+pub fn generate_details_batch(
+    user_ids: Vec<i32>,
+    config: &Config,
+    available_sub_ids: &[i32],  // New
+    available_pref_ids: &[i32], // New
+) -> Vec<DbUserDetails> {
     let mut results = Vec::with_capacity(user_ids.len());
     let mut rng = rand::thread_rng();
 
     for uid in user_ids {
         // FK logic placeholders
+        let sub_id = if !available_sub_ids.is_empty() && rng.gen_bool(0.1) {
+            Some(available_sub_ids[rng.gen_range(0..available_sub_ids.len())])
+        } else {
+            None
+        };
+
+        let pref_id = if !available_pref_ids.is_empty() {
+            Some(available_pref_ids[rng.gen_range(0..available_pref_ids.len())])
+        } else {
+            None
+        };
+
         let sex_id = rng.gen_range(1..=2);
 
         let city_id = if rng.gen_range(0..100) < 10 {

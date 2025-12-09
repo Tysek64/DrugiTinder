@@ -69,3 +69,118 @@ pub struct DbMatch {
     pub date_formed: NaiveDateTime,
     pub status: String,
 }
+//
+// ... (Keep existing structs: CountryRecord, PlanRecord, DbUser, DbUserDetails, DbSwipe, DbMatch) ...
+
+// --- 1. Admin & Auth ---
+#[derive(Debug, Serialize)]
+pub struct DbAdministrator {
+    pub fk_user_id: i32,
+    pub hiring_date: NaiveDateTime,
+    pub reports_handled: i32,
+}
+
+// --- 2. Subscriptions ---
+#[derive(Debug, Serialize)]
+pub struct DbBillingAddress {
+    pub street: String,
+    pub postal_code: String,
+    pub fk_city_id: i32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DbPaymentData {
+    pub token: String,
+    pub fk_billing_address_id: i32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DbSubscription {
+    pub expiration_date: NaiveDateTime,
+    pub last_renewal: Option<NaiveDateTime>,
+    pub created_at: NaiveDateTime,
+    pub uploaded_at: NaiveDateTime,
+    pub is_active: bool,
+    pub auto_renewal: bool,
+    pub fk_subscription_plan_id: i32,
+    pub fk_payment_data_id: Option<i32>,
+}
+
+// --- 3. Preferences & Interests ---
+#[derive(Debug, Serialize)]
+pub struct DbSearchPreference {
+    pub search_description: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DbSearchPreferenceSex {
+    pub fk_search_preference_id: i32,
+    pub fk_sex_id: i32,
+    pub priorty: i32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DbSearchPreferenceInterest {
+    pub fk_search_preference_id: i32,
+    pub fk_interest_id: i32,
+    pub level_of_interest: i32,
+    pub is_positive: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DbUserInterest {
+    pub level_of_interest: i32,
+    pub is_positive: bool,
+    pub fk_user_details_id: i32,
+    pub fk_interest_id: i32,
+}
+
+// --- 4. Messaging ---
+#[derive(Debug, Serialize)]
+pub struct DbConversation {
+    pub fk_match_id: i32,
+    pub chat_theme: String,
+    pub chat_reaction: i16,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DbMessage {
+    pub send_time: NaiveDateTime,
+    pub contents: String,
+    pub reaction: Option<i16>,
+    pub fk_sender_id: Option<i32>,
+    pub fk_conversation_id: i32,
+    pub fk_replying_to_message_id: Option<i32>,
+}
+
+// --- 5. Social Safety ---
+#[derive(Debug, Serialize)]
+pub struct DbReport {
+    pub reason: String,
+    pub report_date: NaiveDateTime,
+    pub fk_reporting_user_details_id: i32,
+    pub fk_reported_user_details_id: i32,
+    pub fk_administrator_id: Option<i32>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DbBan {
+    pub fk_user_details_id: i32,
+    pub fk_report_id: i32,
+    pub start_date: NaiveDateTime,
+    pub period_days: i32,
+    pub is_active: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DbBlock {
+    pub fk_blocking_user_details_id: i32,
+    pub fk_blocked_user_details_id: i32,
+    pub start_date: NaiveDateTime,
+    pub end_date: Option<NaiveDateTime>,
+    pub is_active: bool,
+}
