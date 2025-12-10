@@ -1,145 +1,128 @@
--- =============================================================
--- MIGRATION SCRIPT: OLD DDL -> NEW DDL
--- DATABASE: PostgreSQL
--- =============================================================
-
 BEGIN;
 
--- -------------------------------------------------------------
--- 1. PRE-CLEANING: Deduplication
--- -------------------------------------------------------------
--- We must remove duplicates before applying new UNIQUE constraints.
+-- 1. MISC
+-- 1.1 add: subscription_plan.max_users
+ALTER TABLE subscription_plan
+ADD COLUMN IF NOT EXISTS max_users INTEGER DEFAULT 1 CHECK (max_users > 0);
 
--- Clean `search_preference_interest`
-DELETE FROM search_preference_interest a
-USING search_preference_interest b
-WHERE a.id > b.id
-  AND a.fk_search_preference_id = b.fk_search_preference_id
-  AND a.fk_interest_id = b.fk_interest_id;
+-- 1.2 fix: typo in search_preference_sex
+DO $$
+BEGIN
+  IF EXISTS(SELECT 1
+    FROM information_schema.columns
+    WHERE table_name='search_preference_sex' 
+      AND column_name='priorty')
+  THEN
+    ALTER TABLE "public"."search_preference_sex" 
+      RENAME COLUMN "priorty" TO "priority";
+  END IF;
+END $$;
 
--- Clean `user_interest`
-DELETE FROM user_interest a
-USING user_interest b
-WHERE a.id > b.id
-  AND a.fk_user_details_id = b.fk_user_details_id
-  AND a.fk_interest_id = b.fk_interest_id;
+-- 1.3 add: UNIQUE constraint to the user_details.fk_user_id
+-- also purge user_details if more than 1 are pointing to one user
+WITH chosen AS (
+    SELECT DISTINCT ON (fk_user_id)
+        id, fk_user_id
+    FROM user_details
+    WHERE fk_subscription_id IS NOT NULL
+    ORDER BY fk_user_id, id ASC
+),
+fallback AS (
+    SELECT DISTINCT ON (fk_user_id)
+        id, fk_user_id
+    FROM user_details
+    WHERE fk_user_id NOT IN (SELECT fk_user_id FROM chosen)
+    ORDER BY fk_user_id, id ASC
+),
+final_keep AS (
+    SELECT id FROM chosen
+    UNION
+    SELECT id FROM fallback
+)
+DELETE FROM user_details ud
+WHERE ud.id NOT IN (SELECT id FROM final_keep);
 
+ALTER TABLE user_details
+ADD UNIQUE (fk_user_id);
 
--- -------------------------------------------------------------
--- 2. SUBSCRIPTION OWNERSHIP INVERSION (Complex)
--- -------------------------------------------------------------
--- Goal: Move relationship from Child (user_details) to Parent (subscription)
+-- 2. SUBSCRIPTION
+-- 2.1. add: columns
+ALTER TABLE subscription
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT now(),
+ADD COLUMN IF NOT EXISTS fk_owner_id INTEGER;
 
--- A. Add the column as nullable first
-ALTER TABLE subscription ADD COLUMN fk_owner_id INTEGER;
-
--- B. Migrate Data
--- We arbitrarily pick ONE user (LIMIT 1) if multiple users shared a subscription.
+-- 2.2 backfill: fk_owner_id
 UPDATE subscription s
 SET fk_owner_id = (
     SELECT ud.id
     FROM user_details ud
     WHERE ud.fk_subscription_id = s.id
+    ORDER BY ud.id ASC
     LIMIT 1
-);
-
--- C. Delete Orphans
--- Confirmed: Delete subscriptions that have no linked user.
+)
+WHERE fk_owner_id IS NULL
+  AND EXISTS (
+    SELECT 1
+    FROM user_details ud
+    WHERE ud.fk_subscription_id = s.id
+  );
 DELETE FROM subscription WHERE fk_owner_id IS NULL;
 
--- D. Apply Constraints
+-- 2.3 add: constraints
 ALTER TABLE subscription
-    ALTER COLUMN fk_owner_id SET NOT NULL,
-    ADD CONSTRAINT fk_subscription_owner
-        FOREIGN KEY (fk_owner_id) REFERENCES user_details (id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE;
+ALTER COLUMN fk_owner_id SET NOT NULL;
 
--- E. Remove old relationship from user_details
-ALTER TABLE user_details DROP COLUMN fk_subscription_id;
+ALTER TABLE subscription
+ADD CONSTRAINT fk_subscription_owner
+FOREIGN KEY (fk_owner_id) REFERENCES user_details (id)
+ON DELETE CASCADE
+ON UPDATE CASCADE;
 
+-- 3. REPORT FK RE-MAPPING
+-- 3.1 add: new admin id foreign key
+ALTER TABLE report ADD COLUMN fk_administrator_id_new INT;
 
--- -------------------------------------------------------------
--- 3. REPORT -> ADMIN REFERENCE FIX
--- -------------------------------------------------------------
--- Goal: Remap fk_administrator_id from UserID to AdminID
+-- 3.2 drop: old FK contraint
+ALTER TABLE report
+DROP CONSTRAINT IF EXISTS report_fk_administrator_id_fkey;
 
--- A. Drop old constraint
-ALTER TABLE "report" DROP CONSTRAINT report_fk_administrator_id_fkey;
-
--- B. Update Data
--- Map the stored UserID to the actual Administrator ID
-UPDATE "report" r
-SET fk_administrator_id = a.id
+-- 3.3 map old admin.fk_user_id ref to new admin.id ref 
+UPDATE report r
+SET fk_administrator_id_new = a.id
 FROM administrator a
 WHERE r.fk_administrator_id = a.fk_user_id;
 
--- C. Add new constraint referencing administrator(id)
-ALTER TABLE "report"
-    ADD CONSTRAINT report_fk_administrator_id_fkey
-    FOREIGN KEY (fk_administrator_id) REFERENCES administrator (id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE;
-
-
--- -------------------------------------------------------------
--- 4. BLOCK TABLE RESTRUCTURING
--- -------------------------------------------------------------
--- Goal: Change PK from composite to Surrogate (ID)
-
--- A. Drop old PK
-ALTER TABLE block DROP CONSTRAINT block_pkey;
-
--- B. Add new Identity Column
-ALTER TABLE block ADD COLUMN id INTEGER GENERATED ALWAYS AS IDENTITY;
-
--- C. Set new PK
-ALTER TABLE block ADD PRIMARY KEY (id);
-
--- D. Re-add the uniqueness logic as a constraint
-ALTER TABLE block
-    ADD CONSTRAINT block_unique_pair
-    UNIQUE (fk_blocking_user_details_id, fk_blocked_user_details_id);
-
-
--- -------------------------------------------------------------
--- 5. STRUCTURAL ALTERATIONS & CLEANUP
--- -------------------------------------------------------------
-
--- Subscription Plan
-ALTER TABLE subscription_plan
-    ADD COLUMN max_users INTEGER DEFAULT 1 CHECK (max_users > 0);
-
--- Subscription
-ALTER TABLE subscription
-    ADD COLUMN updated_at TIMESTAMP DEFAULT now(),
-    DROP COLUMN last_renewal, -- Confirmed Data Loss
-    DROP COLUMN uploaded_at;
-
--- Search Preference Sex
-ALTER TABLE search_preference_sex
-    RENAME COLUMN priorty TO priority;
-
--- User Details
-ALTER TABLE user_details
-    ADD CONSTRAINT user_details_fk_user_id_key UNIQUE (fk_user_id);
-
--- Apply Unique Constraints to cleaned tables
-ALTER TABLE search_preference_interest
-    ADD CONSTRAINT search_preference_interest_unique_key
-    UNIQUE (fk_search_preference_id, fk_interest_id);
-
-ALTER TABLE user_interest
-    ADD CONSTRAINT user_interest_unique_key
-    UNIQUE (fk_user_details_id, fk_interest_id);
-
-
--- -------------------------------------------------------------
--- 6. VERIFICATION (Optional - for logging)
--- -------------------------------------------------------------
 DO $$
-BEGIN
-    RAISE NOTICE 'Migration completed successfully. Tables transformed.';
-END $$;
+  DECLARE
+    count_unmapped INT;
+  BEGIN
+    SELECT count(*)
+    INTO count_unmapped
+    FROM report
+    WHERE fk_administrator_id IS NOT NULL
+    AND fk_administrator_id_new IS NULL;
+
+    IF count_unmapped > 0 THEN
+      RAISE EXCEPTION
+        'Migration aborted: % report rows cannot
+        map old administrator (fk_user_id) to new administrator(id). 
+        Fix data before proceeding.',
+        count_unmapped;
+    END IF;
+END$$;
+
+ALTER TABLE report
+DROP COLUMN fk_administrator_id;
+
+ALTER TABLE report
+RENAME COLUMN fk_administrator_id_new TO fk_administrator_id;
+
+-- 3.4: re-apply the FK to the fk_administrator_id, 
+-- pointing to a new column
+ALTER TABLE report
+ADD CONSTRAINT report_fk_administrator_id_fkey
+FOREIGN KEY (fk_administrator_id) REFERENCES administrator (id)
+ON DELETE SET NULL
+ON UPDATE CASCADE;
 
 COMMIT;

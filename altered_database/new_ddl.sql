@@ -92,9 +92,6 @@ CREATE TABLE subscription (
     FOREIGN KEY (fk_payment_data_id) REFERENCES payment_data (id)
         ON DELETE SET NULL
         ON UPDATE CASCADE,
-    FOREIGN KEY (fk_owner_id) REFERENCES user (id)
-        ON DELETE SET NULL
-        ON UPDATE CASCADE,
     CHECK (updated_at IS NULL OR expiration_date >= updated_at)
 );
 
@@ -104,7 +101,6 @@ CREATE TABLE subscription (
 CREATE TABLE search_preference (
     id                 INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     search_description TEXT,
-    -- HERE
     created_at         TIMESTAMP DEFAULT now(),
     updated_at        TIMESTAMP DEFAULT now()
 );
@@ -216,7 +212,6 @@ CREATE TABLE swipe (
     result             BOOLEAN,
     fk_swiping_user_details_id INT NOT NULL,
     fk_swiped_user_details_id  INT NOT NULL,
-    -- HERE
     swipe_time         TIMESTAMP DEFAULT now(),
     FOREIGN KEY (fk_swiping_user_details_id) REFERENCES user_details (id)
         ON DELETE CASCADE

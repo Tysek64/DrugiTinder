@@ -2,7 +2,7 @@
 set -e
 
 CONTAINER_NAME=${1:-pdb-demo}
-MIGRATION_FILE="alter_db.sql"
+MIGRATION_FILE="${2:-alter_db}.sql"
 
 echo ">>> Migrating $CONTAINER_NAME to new schema."
 
