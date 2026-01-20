@@ -1,19 +1,37 @@
 import random
 from faker import Faker
 import settings
+from datetime import timedelta
+from pymongo import UpdateOne
+from datetime import datetime
 
 fake = Faker()
 
 def create(db, matches_data):
     count = settings.COUNTS["MESSAGES"]
     print(f"Generowanie {count} wiadomości...")
+    
+    if not matches_data:
+        print("Nie wygenerowano matchów")
+        return
+
     messages = []
-    last_msg_map = {}
+    last_msg_map = {} 
 
     for _ in range(count):
         match = random.choice(matches_data)
+        
         sender_id = random.choice(match['members'])
-        send_time = fake.date_time_between(start_date=match['date_formed'], end_date='now')
+        
+        match_start = match['date_formed']
+        
+        match_end = match.get('date_ended') or datetime.now()
+        
+        if match_end <= match_start:
+            match_end = match_start + timedelta(hours=1)
+            
+        send_time = fake.date_time_between(start_date=match_start, end_date=match_end)
+        
         text = fake.sentence()
 
         messages.append({
@@ -21,13 +39,14 @@ def create(db, matches_data):
             "sender_id": sender_id,
             "contents": text,
             "send_time": send_time,
-            "reaction": random.choice([None, 1, 2])
+            "reaction": random.choice([None, None, None, 1, 2]) 
         })
         
         last_msg_map[match['_id']] = {
             "sender_id": sender_id, "text": text, "timestamp": send_time
         }
 
+        #batchowanie
         if len(messages) >= 2000:
             db.messages.insert_many(messages)
             messages = []
@@ -35,6 +54,12 @@ def create(db, matches_data):
     if messages:
         db.messages.insert_many(messages)
 
-    print("Aktualizacja statusów ostatnich wiadomości...")
+    print("Aktualizacja 'last_message' w meczach...")
+    operations = []
     for m_id, l_msg in last_msg_map.items():
-        db.matches.update_one({"_id": m_id}, {"$set": {"last_message": l_msg}})
+        operations.append(
+            UpdateOne({"_id": m_id}, {"$set": {"last_message": l_msg}})
+        )
+    
+    if operations:
+        db.matches.bulk_write(operations)
