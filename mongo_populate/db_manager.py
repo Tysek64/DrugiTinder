@@ -1,9 +1,10 @@
 from pymongo import MongoClient
 import settings
+import certifi
 
 def get_database():
     try:
-        client = MongoClient(settings.MONGO_URI)
+        client = MongoClient(settings.MONGO_URI, tlsCAFile=certifi.where())
         return client[settings.DB_NAME]
     except Exception as e:
         print(f"Halo baza: {e}")
