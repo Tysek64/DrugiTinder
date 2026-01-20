@@ -57,7 +57,7 @@ def generate_identity(fname, lname):
 
 def create(db, plan_ids):
     count = settings.COUNTS["USERS"]
-    print(f"Generowanie {count} użytkowników (realistyczny chaos)...")
+    print(f"Generowanie {count} użytkowników...")
     users = []
     interests_pool = ['Hiking', 'Cooking', 'Gaming', 'Netflix', 'Gym', 'Travel', 'Music', 'Art', 'Coding', 'Dancing']
     
