@@ -1,0 +1,28 @@
+import random
+from faker import Faker
+import settings
+
+fake = Faker()
+
+def create(db, user_ids, admin_ids):
+    count = settings.COUNTS["REPORTS"]
+    print(f"Generowanie {count} reportów...")
+    reports = []
+    reasons = ["Harassment", "Fake Profile", "Spam", "Hate Speech", "Inappropriate Content"]
+    
+    for _ in range(count):
+        reporter, reported = random.sample(user_ids, 2)
+        reports.append({
+            "reporting_user_id": reporter,
+            "reported_user_id": reported,
+            "reason": random.choice(reasons),
+            "status": "resolved",
+            "admin_action": {
+                "administrator_id": random.choice(admin_ids),
+                "decision": "warning",
+                "reviewed_at": fake.date_time_between(start_date='-1m', end_date='now')
+            },
+            "report_date": fake.date_time_between(start_date='-2m', end_date='-1m')
+        })
+    
+    db.reports.insert_many(reports)
