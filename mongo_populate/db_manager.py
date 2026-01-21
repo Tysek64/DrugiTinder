@@ -3,8 +3,6 @@ import settings
 
 def get_database():
     try:
-        # For local Docker MongoDB (no SSL), use simple connection
-        # For MongoDB Atlas (cloud), add ?tls=true to your MONGO_URI
         client = MongoClient(settings.MONGO_URI)
         return client[settings.DB_NAME]
     except Exception as e:
