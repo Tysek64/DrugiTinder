@@ -59,6 +59,6 @@ def create(db, user_ids):
     if required_swipes:
         db.swipes.insert_many(required_swipes)
         
-    print(f"Utworzono {len(matches)} meczów i {len(required_swipes)} swipów sukcesu.")
+    print(f"Utworzono {len(matches)} matchow i {len(required_swipes)} swipów sukcesu.")
     
     return list(db.matches.find()), matched_pairs

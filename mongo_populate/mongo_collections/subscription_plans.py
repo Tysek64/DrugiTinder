@@ -1,5 +1,5 @@
 def create(db):
-    print("Hardkodowanie planów subskrypcji...")
+    print("Generowanie planów subskrypcji...")
     plans = [
         {
             "name": "Free", "price_per_month": 0.00, "payment_cycle": "infinite",
