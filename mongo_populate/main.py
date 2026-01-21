@@ -3,9 +3,12 @@ import populate
 import settings
 
 if __name__ == "__main__":
+    settings.apply_args()  # Parse CLI arguments first
+    
     start_time = datetime.now()
     print("--- START GENERATORA ---")
     print(f"Baza: {settings.DB_NAME}")
+    print(f"Konfiguracja: {settings.COUNTS}")
     
     populate.run()
     

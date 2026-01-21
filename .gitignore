@@ -2,3 +2,4 @@ skrypt/__pycache__
 mongo_populate/__pycache__
 mongo_populate/collections/__pycache__
 mongo_populate/.env
+**/*/__pycache__
