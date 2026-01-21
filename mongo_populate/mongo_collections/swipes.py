@@ -6,10 +6,17 @@ fake = Faker()
 
 def create(db, user_ids, matched_pairs_set):
     count = settings.COUNTS["SWIPES"]
-    print(f"Generowanie {count} swipów...")
+    print(f"Generowanie {count} swipes...")
     swipes = []
     
     user_pool = list(user_ids)
+    
+    # For 1:12 ratio (True:False), ~7.7% should be True
+    # Using weighted choice: 1 True, 12 False
+    LIKE_PROBABILITY = 1 / 13  # approximately 7.7%
+    
+    # Larger batch size for handling 30M swipes efficiently
+    BATCH_SIZE = 50000
     
     attempts = 0
     while len(swipes) < count and attempts < count * 2:
@@ -20,7 +27,7 @@ def create(db, user_ids, matched_pairs_set):
         if pair_key in matched_pairs_set:
             continue
         
-        result = random.choice([True, False, False]) 
+        result = random.random() < LIKE_PROBABILITY  # 1:12 ratio True:False
         
         swipes.append({
             "swiper_id": u1,
@@ -29,8 +36,8 @@ def create(db, user_ids, matched_pairs_set):
             "swipe_time": fake.date_time_between(start_date='-1y', end_date='now')
         })
         
-        # batchowanie
-        if len(swipes) >= 5000:
+        # batchowanie - larger batch for better performance with 30M swipes
+        if len(swipes) >= BATCH_SIZE:
             db.swipes.insert_many(swipes)
             swipes = []
     

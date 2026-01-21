@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
-DB_NAME = os.getenv("DB_NAME", "tinder_big")
+DB_NAME = os.getenv("DB_NAME", "tinder_10mln")
 
 # Default counts
 COUNTS = {

@@ -7,7 +7,7 @@ fake = Faker()
 
 def create(db, user_ids):
     count = settings.COUNTS["MATCHES"]
-    print(f"Generowanie {count} matchow...")
+    print(f"Generowanie {count} matches...")
     
     matches = []
     required_swipes = []
@@ -40,17 +40,18 @@ def create(db, user_ids):
             "swipe_time": swipe_time_2
         })
 
+        status = random.choice(["active", "active", "ended"])
+        
         match_obj = {
             "members": [u1, u2],
-            "status": random.choice(["active", "active", "ended"]), 
+            "status": status, 
             "date_formed": match_date,
-            "date_ended": None,
-            "chat_theme": random.choice(["default", "dark-mode", "love-theme"]),
-            "last_message": None
+            "chat_theme": random.choice(["default", "dark-mode", "love-theme"])
         }
 
-        if match_obj["status"] == "ended":
-             match_obj["date_ended"] = match_date + timedelta(days=random.randint(1, 30))
+        # Only add date_ended for ended matches
+        if status == "ended":
+            match_obj["date_ended"] = match_date + timedelta(days=random.randint(1, 30))
         
         matches.append(match_obj)
 
@@ -59,6 +60,6 @@ def create(db, user_ids):
     if required_swipes:
         db.swipes.insert_many(required_swipes)
         
-    print(f"Utworzono {len(matches)} matchow i {len(required_swipes)} swipów sukcesu.")
+    print(f"Utworzono {len(matches)} matches i {len(required_swipes)} swipes.")
     
     return list(db.matches.find()), matched_pairs

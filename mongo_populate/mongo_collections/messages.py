@@ -34,27 +34,34 @@ def create(db, matches_data):
         
         text = fake.sentence()
 
-        messages.append({
+        message = {
             "match_id": match['_id'],
             "sender_id": sender_id,
             "contents": text,
-            "send_time": send_time,
-            "reaction": random.choice([None, None, None, 1, 2]) 
-        })
+            "send_time": send_time
+        }
+        
+        # Only add reaction if not None (avoid null fields)
+        reaction = random.choice([None, None, None, 1, 2])
+        if reaction is not None:
+            message["reaction"] = reaction
+        
+        messages.append(message)
         
         last_msg_map[match['_id']] = {
             "sender_id": sender_id, "text": text, "timestamp": send_time
         }
 
-        #batchowanie
-        if len(messages) >= 2000:
+        # batchowanie - larger batch for better performance with 15M messages
+        BATCH_SIZE = 50000
+        if len(messages) >= BATCH_SIZE:
             db.messages.insert_many(messages)
             messages = []
 
     if messages:
         db.messages.insert_many(messages)
 
-    print("Aktualizacja 'last_message' w meczach...")
+    print("Aktualizacja 'last_message' w matches...")
     operations = []
     for m_id, l_msg in last_msg_map.items():
         operations.append(

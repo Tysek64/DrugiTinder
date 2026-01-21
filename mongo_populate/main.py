@@ -3,7 +3,7 @@ import populate
 import settings
 
 if __name__ == "__main__":
-    settings.apply_args()  # Parse CLI arguments first
+    settings.apply_args()
     
     start_time = datetime.now()
     print("--- START GENERATORA ---")
