@@ -10,7 +10,7 @@ def run():
     
     plan_ids = subscription_plans.create(db)
     admin_ids = admins.create(db)
-    user_ids = users.create(db, plan_ids)
+    user_ids = users.create(db, plan_ids, admin_ids)
     
     matches_data, matched_pairs_set = matches.create(db, user_ids)
     

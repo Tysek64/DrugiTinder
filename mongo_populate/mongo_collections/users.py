@@ -1,6 +1,7 @@
 import random
 from faker import Faker
 import settings
+from datetime import timedelta
 
 fake = Faker(['pl_PL', 'en_US']) 
 
@@ -55,12 +56,18 @@ def generate_identity(fname, lname):
 
     return username, f"{email_user}@{email_domain}"
 
-def create(db, plan_ids):
+def create(db, plan_ids, admin_ids):
     count = settings.COUNTS["USERS"]
     print(f"Generowanie {count} użytkowników...")
     users = []
     interests_pool = ['Hiking', 'Cooking', 'Gaming', 'Netflix', 'Gym', 'Travel', 'Music', 'Art', 'Coding', 'Dancing']
-    
+    ban_reasons = [
+        "Repeated harassment", 
+        "Fake profile", 
+        "Scam activity", 
+        "Inappropriate photos", 
+        "Hate speech"
+    ]
     for _ in range(count):
         sex = random.choice(['Male', 'Female'])
         pref_sex = 'Female' if sex == 'Male' else 'Male'
@@ -73,6 +80,18 @@ def create(db, plan_ids):
             lname = fake.last_name_female()
             
         username, email = generate_identity(fname, lname)
+
+        is_banned = random.random() < 0.05
+        ban_details = None
+
+        if is_banned:
+            ban_date = fake.date_time_between(start_date='-1m', end_date='now')
+            ban_details = {
+                "reason": random.choice(ban_reasons),
+                # Ban wygasa za 1 do 365 dni od momentu nałożenia
+                "expires_at": ban_date + timedelta(days=random.randint(1, 365)),
+                "issued_by": random.choice(admin_ids)
+            }
 
         user = {
             "username": username,
@@ -110,7 +129,8 @@ def create(db, plan_ids):
                 "billing_info": {"billing_address": fake.address(), "postal_code": fake.postcode()}
             },
             "potential_swipes": [],
-            "is_banned": False,
+            "is_banned": is_banned,
+            **({"ban_details": ban_details} if is_banned else {}),
             "created_at": fake.date_time_between(start_date='-2y', end_date='-1y')
         }
         users.append(user)
