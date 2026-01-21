@@ -17,5 +17,5 @@ def reset_database(db):
         'swipes', 'matches', 'messages', 'reports'
     ]
     for col in collections:
-        db[col].drop()
+        db[col].delete_many({})
     print(f"Usuwanie '{settings.DB_NAME}' .")
