@@ -137,6 +137,8 @@ def create(db, plan_ids, admin_ids):
         "Inappropriate photos", 
         "Hate speech"
     ]
+    p_no_images = 0.03  # 3% chance of no images
+    
     for _ in range(count):
         sex = pick_gender()
         pref_sex = generate_preferences(sex)
@@ -171,6 +173,14 @@ def create(db, plan_ids, admin_ids):
                 "issued_by": random.choice(admin_ids)
             }
 
+        if random.random() < p_no_images:
+            images_list = []
+        else:
+            images_list = [
+                {"file_path": f"/img/{fake.uuid4()}.jpg", "is_current": True, "is_verified": True},
+                {"file_path": f"/img/{fake.uuid4()}.jpg", "is_current": False, "is_verified": False}
+            ]
+
         user = {
             "username": username,
             "email": email,
@@ -183,10 +193,7 @@ def create(db, plan_ids, admin_ids):
                     "type": "Point",
                     "coordinates": [float(fake.longitude()), float(fake.latitude())]
                 },
-                "images": [
-                    {"file_path": f"/img/{fake.uuid4()}.jpg", "is_current": True, "is_verified": True},
-                    {"file_path": f"/img/{fake.uuid4()}.jpg", "is_current": False, "is_verified": False}
-                ],
+                "images": images_list,
                 "interests": [
                     {"name": i, "level": random.randint(1, 10), "is_positive": True} 
                     for i in random.sample(interests_pool, k=random.randint(2, 4))
@@ -200,7 +207,8 @@ def create(db, plan_ids, admin_ids):
             "subscription": {
                 "plan_id": random.choice(plan_ids),
                 "expiration_date": fake.date_time_between(start_date='now', end_date='+1y'),
-                "is_active": True
+                "is_active": True,
+                "auto_renewal": random.random() < 0.7  
             },
             "payment_data": {
                 "token": f"tok_{fake.uuid4()}",

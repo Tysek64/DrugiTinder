@@ -48,6 +48,7 @@ ORDER BY match_count DESC;
 -- ==========================================================
 -- 5. Raport: Wszystkie wiadomości z ostatnich 7 dni
 -- ==========================================================
+-- Mongo done
 SELECT 
     u.name,
     u.surname,
@@ -74,6 +75,7 @@ ORDER BY message_count DESC;
 -- ==========================================================
 -- 7. Raport: Użytkownicy z najdroższym planem subskrypcji
 -- ==========================================================
+-- Mongo done
 SELECT 
     u.name,
     u.surname,
@@ -100,6 +102,7 @@ ORDER BY active_blocks DESC;
 -- ==========================================================
 -- 9. Raport: Lista użytkowników, którzy zostali zbanowani, wraz z powodem i datą
 -- ==========================================================
+-- Mongo done
 SELECT u.name, u.surname, r.reason, b.start_date, b.period_days
 FROM ban b
 JOIN "user_details" u ON b.fk_user_details_id = u.id
@@ -109,6 +112,7 @@ ORDER BY b.start_date DESC;
 -- ==========================================================
 -- 10. Raport: Średni poziom zainteresowania użytkowników konkretnymi hobby
 -- ==========================================================
+-- Mongo done
 SELECT i.name AS interest, ROUND(AVG(ui.level_of_interest), 2) AS avg_interest
 FROM user_interest ui
 JOIN interest i ON ui.fk_interest_id = i.id
@@ -118,6 +122,7 @@ ORDER BY avg_interest DESC;
 -- ==========================================================
 -- 11. Raport: Użytkownicy z automatycznym odnawianiem subskrypcji
 -- ==========================================================
+-- Mongo done
 SELECT u.name, u.surname, sp.name AS plan_name
 FROM "user_details" u
 JOIN subscription s ON u.fk_subscription_id = s.id
@@ -147,6 +152,7 @@ LIMIT 20;
 -- ==========================================================
 -- 13. Raport: Ranking popularności zainteresowań – z iloma dopasowaniami wiążą się konkretne hobby
 -- ==========================================================
+-- Mongo done
 WITH interest_match AS (
     SELECT DISTINCT
         i.id AS interest_id,
@@ -184,6 +190,7 @@ ORDER BY m.date_ended DESC;
 -- ==========================================================
 -- 15. Raport: Użytkownicy, którzy nigdy nie dodali zdjęcia do profilu
 -- ==========================================================
+-- Mongo done
 SELECT u.id, u.name, u.surname
 FROM "user_details" u
 WHERE NOT EXISTS (
@@ -193,6 +200,7 @@ WHERE NOT EXISTS (
 -- ==========================================================
 -- 16. Raport: Średni czas reakcji na wiadomości w każdej rozmowie
 -- ==========================================================
+-- Mongo done
 SELECT
   c.id AS conversation_id,
   ROUND(AVG(diff_min), 2) AS avg_response_time_min
@@ -216,6 +224,7 @@ ORDER BY avg_response_time_min;
 -- ==========================================================
 -- 17. Raport: Użytkownicy, którzy nigdy nie zostali zablokowani przez innych
 -- ==========================================================
+-- Mongo done
 SELECT u.id, u.name, u.surname
 FROM "user_details" u
 LEFT JOIN block b ON b.fk_blocked_user_details_id = u.id
@@ -237,6 +246,7 @@ ORDER BY month DESC;
 -- ==========================================================
 -- 19. Raport: Użytkownicy z subskrypcją, którzy nie mają żadnych dopasowań
 -- ==========================================================
+-- Mongo done
 SELECT u.name, u.surname, sp.name AS subscription_plan
 FROM "user_details" u
 JOIN subscription s ON u.fk_subscription_id = s.id
