@@ -1,4 +1,4 @@
-// 5. Messages from the last 7 days with sender's name and surname
+// 5. Messages from the last 7 days with sender's name and surname (run on 'messages' collection)
 [
   {
     $lookup:
@@ -54,5 +54,90 @@
         contents: 1,
         send_time: 1
       }
+  }
+]
+
+// 7. Users with moxt expensive subscription plan (run on 'subscription_plans' collection)
+[
+  {
+    $sort: {
+      price_per_month: -1
+    }
+  },
+  {
+    $limit: 1
+  },
+  {
+    $lookup: {
+      from: "users",
+      localField: "_id",
+      foreignField: "subscription.plan_id",
+      as: "users_with_most_expensive_plan"
+    }
+  },
+  {
+    $unwind: "$users_with_most_expensive_plan"
+  },
+  {
+    $project: {
+      _id: "$users_with_most_expensive_plan._id",
+      username:
+        "$users_with_most_expensive_plan.username",
+      plan_name: "$name",
+      price: "$price_per_month"
+    }
+  }
+]
+
+// 9. Banned users with reason and date (run on 'users' collection)
+[
+  {
+    $match: {
+      "is_banned": true
+    }
+  },
+
+  {
+    $project: {
+      _id: 1,
+      username: 1,
+      reason: "$ban_details.reason",
+      expires: "$ban_details.expires_at"
+    }
+  }
+]
+
+//10. Average hobby interest among users (run on 'users' collection)
+[
+  {
+   	$unwind: "$profile.interests"
+  },
+
+  {
+   	$addFields: {
+      "profile.interests.adjusted_level": {
+        $cond: { 
+          if: { $eq: ["$profile.interests.is_positive", true] }, 
+          then: "$profile.interests.level", 
+          else: {$multiply: ["$profile.interests.level", -1]}}
+        }
+    } 
+  },
+  
+  {
+    $group: {
+      _id: "$profile.interests.name",
+      average_level: { $avg: "$profile.interests.adjusted_level" },
+      user_count: { $sum: 1 }
+    }
+  },
+
+  {
+    $project: {
+      hobby: "$_id",
+      average_interest: "$average_level",
+      user_count: "$user_count",
+      _id: 0
+    }
   }
 ]
