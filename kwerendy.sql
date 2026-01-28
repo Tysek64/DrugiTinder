@@ -92,17 +92,35 @@ JOIN subscription_plan sp ON s.fk_subscription_plan_id = sp.id
 WHERE sp.price = (SELECT MAX(price) FROM subscription_plan)
 ORDER BY u.surname, u.name;
 
-
+-- ==========================================================
+-- 8 stare. Raport: Liczba aktywnych blokad, które ma nałożone użytkownik 
+-- ==========================================================
+-- SELECT u.name, u.surname, COUNT(b.fk_blocked_user_details_id) AS active_blocks
+-- FROM "user_details" u
+-- LEFT JOIN block b ON u.id = b.fk_blocked_user_details_id AND b.is_active = TRUE
+-- GROUP BY u.name, u.surname
+-- ORDER BY active_blocks DESC;
 
 -- ==========================================================
--- 8. Raport: Liczba aktywnych blokad, które ma nałożone użytkownik 
+-- 8 nowe. Średnia liczba zainteresowań i szukanych zainteresowań wg płci użytkownika
 -- ==========================================================
 
-SELECT u.name, u.surname, COUNT(b.fk_blocked_user_details_id) AS active_blocks
-FROM "user_details" u
-LEFT JOIN block b ON u.id = b.fk_blocked_user_details_id AND b.is_active = TRUE
-GROUP BY u.name, u.surname
-ORDER BY active_blocks DESC;
+SELECT sex.name, AVG(interests_number), AVG(preferences_number) FROM
+
+(
+SELECT user_details.id, user_details.fk_sex_id, COUNT(DISTINCT(user_interest.id)) AS interests_number, COUNT(DISTINCT(search_preference_interest.id)) AS preferences_number FROM user_details
+
+JOIN user_interest ON user_details.id = user_interest.fk_user_details_id
+
+JOIN search_preference ON search_preference.id = user_details.fk_search_preference_id
+JOIN search_preference_interest ON search_preference.id = search_preference_interest.fk_search_preference_id
+
+GROUP BY user_details.id
+) count_interests
+
+JOIN sex ON sex.id = count_interests.fk_sex_id
+
+GROUP BY sex.name;
 
 -- ==========================================================
 -- 9. Raport: Lista użytkowników, którzy zostali zbanowani, wraz z powodem i datą

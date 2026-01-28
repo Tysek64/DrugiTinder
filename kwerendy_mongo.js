@@ -223,8 +223,24 @@
   }
 ]
 
-// 8. Number of active blocks for every user
-// Tego na razie sie nie da zrobic
+// 8. Average number of interests and interest preferences grouped by user's sex
+[
+  {
+    $group: {
+      _id: "$profile.sex",
+      average_interests: {
+        $avg: {
+          $size: "$profile.interests"
+        }
+      },
+      average_preferences: {
+        $avg: {
+          $size: "$search_preferences.interests"
+        }
+      }
+    }
+  }
+]
 
 // 9. Banned users with reason and date (run on 'users' collection)
 [
