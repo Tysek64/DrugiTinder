@@ -4,17 +4,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
-DB_NAME = os.getenv("DB_NAME", "tinder_10mln")
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://192.168.0.105:27017/")
+DB_NAME = os.getenv("DB_NAME", "Tinder2")
 
 # Default counts
 COUNTS = {
-    "ADMINS": 10,
-    "USERS": 2000,
-    "SWIPES": 5000,
-    "MATCHES": 1000,
-    "MESSAGES": 10000,
-    "REPORTS": 200
+    "ADMINS": 1000,
+    "USERS": 10000,
+    "SWIPES": 1000000,
+    "MATCHES": 2744,
+    "MESSAGES": 135076,
+    "REPORTS": 20000
 }
 
 def parse_args():

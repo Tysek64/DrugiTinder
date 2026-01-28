@@ -1,6 +1,7 @@
 -- ==========================================================
 -- 1. Raport: Lista wszystkich aktywnych użytkowników z ich imionami, nazwiskami, miastami i planami subskrypcji 
 -- ==========================================================
+-- Mongo done
 SELECT 
     u.name, 
     u.surname, 
@@ -15,6 +16,7 @@ ORDER BY u.surname, u.name;
 -- ==========================================================
 -- 2. Raport: Liczba użytkowników według płci w systemie
 -- ==========================================================
+-- Mongo done
 SELECT s.name AS sex, COUNT(u.id) AS user_count
 FROM "user_details" u
 JOIN sex s ON u.fk_sex_id = s.id
@@ -24,6 +26,7 @@ ORDER BY user_count DESC;
 -- ==========================================================
 -- 3. Raport: Subskrypcje wygasające w ciągu najbliższych 30 dni
 -- ==========================================================
+-- Mongo done
 SELECT u.name, u.surname, sp.name AS plan_name, s.expiration_date
 FROM "user_details" u
 JOIN subscription s ON u.fk_subscription_id = s.id
@@ -34,6 +37,7 @@ ORDER BY s.expiration_date;
 -- ==========================================================
 -- 4. Raport: Liczba dopasowań każdego użytkownika – ranking popularności
 -- ==========================================================
+-- Mongo done
 SELECT u.id, u.name, u.surname, COUNT(m_all.id) AS match_count
 FROM "user_details" u
 LEFT JOIN (
@@ -66,6 +70,7 @@ ORDER BY m.send_time DESC;
 -- ==========================================================
 -- 6. Raport: Liczba wiadomości w każdej rozmowie – analiza aktywności
 -- ==========================================================
+-- Mongo done
 SELECT c.id AS conversation_id, COUNT(m.id) AS message_count
 FROM conversation c
 LEFT JOIN message m ON c.id = m.fk_conversation_id
@@ -132,6 +137,7 @@ WHERE s.auto_renewal = TRUE;
 -- ==========================================================
 -- 12. Raport: Najbardziej aktywni użytkownicy w ostatnich 30 dniach
 -- ==========================================================
+-- Mongo done
 SELECT 
     u.id,
     u.name,
@@ -173,6 +179,7 @@ ORDER BY related_matches DESC;
 -- ==========================================================
 -- 14. Raport: Dopasowania zakończone w ostatnich 30 dniach
 -- ==========================================================
+-- Mongo done
 SELECT 
     m.id AS match_id,
     u1.name || ' ' || u1.surname AS user1,
@@ -234,6 +241,7 @@ WHERE b.fk_blocked_user_details_id IS NULL;
 -- ==========================================================
 -- 18. Raport: Średni czas trwania dopasowań w dniach, miesiąc po miesiącu
 -- ==========================================================
+-- Mongo done
 SELECT 
     DATE_TRUNC('month', date_formed) AS month,
     ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(date_ended, now()) - date_formed))/86400),2) AS avg_duration_days,

@@ -7,9 +7,9 @@ username: tysek
 # USER NUMBER OPTIONS
 
 # specify the number of users in the database
-users_number: 1000
+users_number: 10000
 # specify the number of admins in the database
-admins_number:  500
+admins_number:  1000
 
 
 # USER GEOGRAPHIC OPTIONS
@@ -51,7 +51,7 @@ max_admin_hiring_difference:  30
 # REPORT AND BAN OPTIONS
 
 # specify the number of reports per 100 users
-user_report_ratio:  10
+user_report_ratio:  200
 # specify how many reports end in a ban (as a percentage)
 report_ban_ratio: 70
 # specify the max time (in days) after a ban must be put in place (after a report had been created)
@@ -71,18 +71,18 @@ max_user_swipes:  100
 right_swipe_ratio:  75
 
 # specify the probability of a match (in percent) after two successful swipes
-match_probability:  1000
+match_probability:  1
 
 
 # BLOCK OPTIONS
 
 # specify the percentage of matches ending in someone getting blockes
-match_block_ratio:  100
+match_block_ratio:  0
 # specify the max difference in days between the end of a match and someone getting blocked
 max_match_block_difference: 7
 
 # specify the the number of blocks per 100 users
-user_block_ratio: 60
+user_block_ratio: 0
 
 # specify the minimum block length in days
 min_block_length: 15

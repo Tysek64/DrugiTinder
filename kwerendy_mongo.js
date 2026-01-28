@@ -1,3 +1,133 @@
+// 1. Active users' names, surnames, locations and subscription plans
+[
+  {
+    $lookup: {
+      from: "subscription_plans",
+      localField: "subscription.plan_id",
+      foreignField: "_id",
+      as: "subscription_plan"
+    }
+  },
+  {
+    $project: {
+      name: "$profile.name",
+      surname: "$profile.surname",
+      location: "$profile.location",
+      subscription_plan: "$subscription_plan.name"
+    }
+  },
+  {
+    $sort:
+      {
+        surname: 1,
+        name: 1
+      }
+  }
+]
+
+// 2. Number of users grouped by theri sex
+[
+  {
+    $group:
+      {
+        _id: "$profile.sex",
+        number_of_users: {
+          $sum: 1
+        }
+      }
+  }
+]
+
+// 3. Users with subscriptions expiring in the next 30 days
+[
+  {
+    $match:
+      {
+        $expr: {
+          $lte: [
+            "$subscription.expiration_date",
+            {
+              $dateAdd: {
+                startDate: "$$NOW",
+                unit: "day",
+                amount: 30
+              }
+            }
+          ]
+        }
+      }
+  },
+  {
+    $lookup:
+      {
+        from: "subscription_plans",
+        localField: "subscription.plan_id",
+        foreignField: "_id",
+        as: "subscription_plan"
+      }
+  },
+  {
+    $project:
+      {
+        name: "$profile.name",
+        surname: "$profile.surname",
+        subscription_plan:
+          "$subscription_plan.name",
+        expiration_date:
+          "$subscription.expiration_date"
+      }
+  }
+]
+
+// 4. Number of matches of users
+[
+  {
+    $unwind:
+      {
+        path: "$members"
+      }
+  },
+  {
+    $group:
+      {
+        _id: "$members",
+        match_count: {
+          $sum: 1
+        }
+      }
+  },
+  {
+    $lookup:
+      {
+        from: "users",
+        localField: "_id",
+        foreignField: "_id",
+        as: "user"
+      }
+  },
+  {
+    $unwind:
+      {
+        path: "$user"
+      }
+  },
+  {
+    $project:
+      {
+        _id: "$user._id",
+        name: "$user.profile.name",
+        surname: "$user.profile.surname",
+        match_count: "$match_count"
+      }
+  },
+  {
+    $sort:
+      {
+        match_count: -1
+      }
+  }
+]
+
 // 5. Messages from the last 7 days with sender's name and surname (run on 'messages' collection)
 [
   {
@@ -42,6 +172,25 @@
   }
 ]
 
+// 6. Number of messages in every conversation
+[
+  {
+    $group:
+      {
+        _id: "$match_id",
+        message_count: {
+          $sum: 1
+        }
+      }
+  },
+  {
+    $sort:
+      {
+        message_count: -1
+      }
+  }
+]
+
 // 7. Users with most expensive subscription plan (run on 'subscription_plans' collection)
 [
   {
@@ -73,6 +222,9 @@
     }
   }
 ]
+
+// 8. Number of active blocks for every user
+// Tego na razie sie nie da zrobic
 
 // 9. Banned users with reason and date (run on 'users' collection)
 [
@@ -137,6 +289,138 @@
 ]
 // or just the ' "subscription.auto_renewal": true ' query in a simple find()
 
+// 12. Top 20 most active users in the last 30 days
+[
+  {
+    $lookup: {
+      from: "swipes",
+      let: {
+        user_id: "$_id"
+      },
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $gte: [
+                "$swipe_time",
+                {
+                  $dateSubtract: {
+                    startDate: "$$NOW",
+                    unit: "day",
+                    amount: 30
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          $group: {
+            _id: "$swiper_id",
+            swipe_count: {
+              $sum: 1
+            }
+          }
+        },
+        {
+          $match: {
+            $expr: {
+              $eq: ["$_id", "$$user_id"]
+            }
+          }
+        }
+      ],
+      as: "swipes_count"
+    }
+  },
+  {
+    $unwind: {
+      path: "$swipes_count"
+    }
+  },
+  {
+    $lookup: {
+      from: "messages",
+      let: {
+        user_id: "$_id"
+      },
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $gte: [
+                "$send_time",
+                {
+                  $dateSubtract: {
+                    startDate: "$$NOW",
+                    unit: "day",
+                    amount: 30
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          $group: {
+            _id: "$sender_id",
+            message_count: {
+              $sum: 1
+            }
+          }
+        },
+        {
+          $match: {
+            $expr: {
+              $eq: ["$_id", "$$user_id"]
+            }
+          }
+        }
+      ],
+      as: "messages_count"
+    }
+  },
+  {
+    $unwind: {
+      path: "$messages_count",
+      preserveNullAndEmptyArrays: true
+    }
+  },
+  {
+    $project: {
+      name: "$profile.name",
+      surname: "$profile.surname",
+      swipes_count: "$swipes_count.swipe_count",
+      messages_count: {
+        $ifNull: [
+          "$messages_count.message_count",
+          0
+        ]
+      },
+      total_activity: {
+        $add: [
+          "$swipes_count.swipe_count",
+          {
+            $ifNull: [
+              "$messages_count.message_count",
+              0
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    $sort: {
+      total_activity: -1
+    }
+  },
+  {
+    $limit: 20
+  }
+]
+// Za dlugo sie wykonuje, trzeba bedzie cos zmienic
+
 // 13. Most popular hobbies in matches (run on 'matches' collection)
 [
   {
@@ -173,6 +457,73 @@
     $sort: { matches: -1}
   }
 ]
+
+// 14. Matches ended in the last 30 days
+[
+  {
+    $match: {
+      $expr: {
+        $gte: [
+          "$date_ended",
+          {
+            $dateSubtract: {
+              startDate: "$$NOW",
+              unit: "day",
+              amount: 30
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    $lookup: {
+      from: "users",
+      localField: "members.0",
+      foreignField: "_id",
+      as: "user_1"
+    }
+  },
+  {
+    $lookup: {
+      from: "users",
+      localField: "members.1",
+      foreignField: "_id",
+      as: "user_2"
+    }
+  },
+  {
+    $unwind: {
+      path: "$user_1"
+    }
+  },
+  {
+    $unwind: {
+      path: "$user_2"
+    }
+  },
+  {
+    $project: {
+      user1: {
+        $concat: [
+          "$user_1.profile.name",
+          " ",
+          "$user_1.profile.surname"
+        ]
+      },
+      user2: {
+        $concat: [
+          "$user_2.profile.name",
+          " ",
+          "$user_2.profile.surname"
+        ]
+      },
+      date_formed: 1,
+      date_ended: 1
+    }
+  }
+]
+
 
 // 15. Users without profile images (run on 'users' collection) (not an aggregation, run as a simple query)
 {
@@ -308,6 +659,31 @@ db.users.find({
   "_id": { $nin: [/*wklej tutaj skopiowane id*/] }
 }).project({ username: 1 });
 
+// 18. Average match time in days grouped by month
+[
+  {
+    $group: {
+      _id: {
+        $month: "$date_formed"
+      },
+      avg_duration_days: {
+        $avg: {
+          $dateDiff: {
+            startDate: "$date_formed",
+            endDate: {
+              $ifNull: ["$date_ended", "$$NOW"]
+            },
+            unit: "day"
+        	}
+        }
+      },
+      match_count: {
+        $sum: 1
+      }
+    }
+  }
+]
+
 // 19. Users with active subscription without any matches (run on 'users' collection)
 [
   {
@@ -339,3 +715,6 @@ db.users.find({
     }
   }
 ]
+
+// 20. 
+

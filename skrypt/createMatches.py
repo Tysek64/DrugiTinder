@@ -91,7 +91,7 @@ def populateSwipes ():
     for userNumber, (userID, userData) in enumerate(users.items()):
         swiped[userID] = list(users.keys())
         swiped[userID].remove(userID)
-        for i in range(utils.randomNumber(0, config['max_user_swipes'])):
+        for i in range(config['max_user_swipes']):
             # generate swiping user
             swipingUser = userID
 
