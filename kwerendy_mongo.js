@@ -733,4 +733,68 @@ db.users.find({
 ]
 
 // 20. 
-
+[
+  {
+    $lookup: {
+      from: "users",
+      localField: "members.0",
+      foreignField: "_id",
+      as: "user_1"
+    }
+  },
+  {
+    $lookup: {
+      from: "users",
+      localField: "members.1",
+      foreignField: "_id",
+      as: "user_2"
+    }
+  },
+  {
+    $unwind: {
+      path: "$user_1"
+    }
+  },
+  {
+    $unwind: {
+      path: "$user_2"
+    }
+  },
+  {
+    $project: {
+      user1_interests: {
+        $filter: {
+          input: "$user_1.profile.interests",
+          as: "interest",
+          cond: {
+            $eq: ["$$interest.is_positive", true]
+          }
+        }
+      },
+      user2_interests: {
+        $filter: {
+          input: "$user_2.profile.interests",
+          as: "interest",
+          cond: {
+            $eq: ["$$interest.is_positive", true]
+          }
+        }
+      },
+    }
+  },
+  {
+    $group: {
+      _id: 1,
+      fieldN: {
+        $avg: {
+          $size: {
+            $setIntersection: [
+              "$user1_interests.name",
+              "$user2_interests.name"
+            ]
+          }
+        }
+      }
+    }
+  }
+]

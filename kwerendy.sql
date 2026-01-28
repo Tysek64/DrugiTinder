@@ -104,7 +104,7 @@ ORDER BY u.surname, u.name;
 -- ==========================================================
 -- 8 nowe. Średnia liczba zainteresowań i szukanych zainteresowań wg płci użytkownika
 -- ==========================================================
-
+-- Mongo done
 SELECT sex.name, AVG(interests_number), AVG(preferences_number) FROM
 
 (
@@ -287,6 +287,7 @@ WHERE u.id NOT IN (
 -- 20. Raport: Analiza dopasowań według zgodności zainteresowań
 -- Średnia liczba wspólnych pozytywnych zainteresowań między sparowanymi użytkownikami
 -- ==========================================================
+-- Mongo done
 SELECT
   ROUND(AVG(COALESCE(shared_count, 0)), 2) AS avg_shared_interests
 FROM (
